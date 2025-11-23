@@ -41,8 +41,8 @@ archives:
       strip_binary_directory: true
 release:
     draft: true
-    replace_existing_draft: false
-    replace_existing_artifacts: true
+    replace_existing_draft: true
+    replace_existing_artifacts: false
     target_commitish: "{{ .Commit }}"
     make_latest: true
     mode: replace
