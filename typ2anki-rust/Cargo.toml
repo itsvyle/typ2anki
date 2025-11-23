@@ -1,6 +1,6 @@
 [package]
 name = "typ2anki"
-version = "1.0.4"
+version = "1.0.5"
 categories = ["visualization"]
 edition = "2024"
 homepage = "https://github.com/sgomezsal/typ2anki"
@@ -13,7 +13,7 @@ description = "Compile Typst flashcards into Anki decks"
 exclude = [
     "target/",
     "goreleaser--dist/",
-    ".goreleaser.yaml",
+    ".gorelease*.yaml",
     "typ2anki.ankiaddon",
 ]
 

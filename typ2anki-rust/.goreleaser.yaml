@@ -4,9 +4,6 @@ dist: goreleaser-dist
 project_name: typ2anki
 env:
     - BUILD_VERSION={{ if index .Env "_VERSION"  }}{{ .Env._VERSION }}{{ else }}{{ .Version }}{{ end }}
-before:
-    hooks:
-        - ./releaser-before.sh
 builds:
     - id: typ2anki
       builder: rust
@@ -21,6 +18,8 @@ builds:
           - x86_64-pc-windows-gnu
           #   - x86_64-apple-darwin
           #   - aarch64-apple-darwin
+          # Important: leave a blank line at the end of this list
+
       flags:
           - --release
           - --locked
