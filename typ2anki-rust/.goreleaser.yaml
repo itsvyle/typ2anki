@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=/home/gm/.config/goreleaser-schema.json
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 dist: goreleaser-dist
 project_name: typ2anki

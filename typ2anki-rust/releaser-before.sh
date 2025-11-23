@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 
 p=$(pwd)
+
+if [[ "$p" == *"/typ2anki-rust" ]]; then
+    echo "Running releaser-before.sh in typ2anki-rust/ ..."
+else
+    echo "This script must be run from within the typ2anki-rust/ directory"
+    exit 1
+fi
+
 cd ..
 ./bundle-ankiaddon.sh || touch ./typ2anki.ankiaddon
 cd "$p"
@@ -42,3 +50,4 @@ if ! command -v yq &>/dev/null; then
 else
     yq ".builds[0].targets = [\"$TARGET\"]" ./.goreleaser.yaml >"$PROCESSED_FILE"
 fi
+echo "Generated $PROCESSED_FILE with TARGET=$TARGET"
