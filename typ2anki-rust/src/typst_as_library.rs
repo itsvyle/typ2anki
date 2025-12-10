@@ -78,10 +78,7 @@ impl TypstWrapperWorld {
             root,
             workdir: std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
             fonts: fonts.fonts,
-            source: Source::new(
-                FileId::new(None, VirtualPath::new("main.typ")),
-                source.into(),
-            ),
+            source: Source::new(FileId::new(None, VirtualPath::new("main.typ")), source),
             time: time::OffsetDateTime::now_utc(),
             cache_directory,
             http: reqwest::blocking::Client::new(),
@@ -271,11 +268,7 @@ impl typst::World for TypstWrapperWorld {
 }
 
 fn retry<T, E>(mut f: impl FnMut() -> Result<T, E>) -> Result<T, E> {
-    if let Ok(ok) = f() {
-        Ok(ok)
-    } else {
-        f()
-    }
+    if let Ok(ok) = f() { Ok(ok) } else { f() }
 }
 
 // Printing diagnostics
@@ -326,7 +319,7 @@ impl<'a> codespan_reporting::files::Files<'a> for TypstWrapperWorld {
     }
 
     fn source(&'a self, id: FileId) -> CodespanResult<Self::Source> {
-        Ok(self.lookup(id)?)
+        self.lookup(id)
     }
 
     fn line_index(&'a self, id: FileId, given: usize) -> CodespanResult<usize> {
@@ -386,12 +379,11 @@ pub fn render_diagnostics(
         }
         .with_message(diagnostic.message.clone())
         .with_notes({
-            let r = diagnostic
+            diagnostic
                 .hints
                 .iter()
                 .map(|e| (eco_format!("hint: {e}")).into())
-                .collect();
-            r
+                .collect()
         })
         .with_labels(label(world, diagnostic.span).into_iter().collect());
 

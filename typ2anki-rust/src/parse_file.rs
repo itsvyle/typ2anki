@@ -14,7 +14,7 @@ use crate::{
     utils,
 };
 
-const DEFAULT_ANKICONF: &'static str = "#let conf(
+const DEFAULT_ANKICONF: &str = "#let conf(
   doc,
 ) = {
   doc
@@ -41,12 +41,12 @@ pub fn get_ankiconf_hash() -> String {
     if !ankiconf_path.exists() {
         return String::new();
     }
-    let mut content = std::fs::read_to_string(ankiconf_path).unwrap_or(String::new());
+    let mut content = std::fs::read_to_string(ankiconf_path).unwrap_or_default();
     let imports = utils::get_all_typst_imports(content.as_str());
 
     for import in imports {
         if let Ok(import_content) = std::fs::read_to_string(&import) {
-            content.push_str("\n");
+            content.push('\n');
             content.push_str(&import_content);
         }
     }
@@ -63,7 +63,6 @@ mod parse_card_tree_sitter {
 
     use once_cell::sync::OnceCell;
     use tree_sitter::{Node, Parser};
-    use tree_sitter_typst;
 
     static TS_PARSER: OnceCell<Mutex<Parser>> = OnceCell::new();
     static VALUE_TRIM_CHARS: &[char] = &['"', ' ', '\n', '\t', '\r', '[', ']', ':'];
@@ -421,7 +420,7 @@ pub fn parse_cards_from_file_content(
         _duration
     );
 
-    if parsed.len() == 0 {
+    if parsed.is_empty() {
         return Ok(file);
     }
 

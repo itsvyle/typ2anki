@@ -96,6 +96,7 @@ impl TypFileStats {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct BarebonesCardInfo {
     // The user defined unique card_id
@@ -142,7 +143,7 @@ impl CardInfo {
         let card_id = ID_RE
             .captures(card_str)
             .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
-        if let None = card_id {
+        if card_id.is_none() {
             return Err("Card ID not found".to_string());
         }
         let card_id = card_id.unwrap();
@@ -150,7 +151,7 @@ impl CardInfo {
         let target_deck = DECK_RE
             .captures(card_str)
             .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
-        if let None = target_deck {
+        if target_deck.is_none() {
             return Err("Target deck not found".to_string());
         }
         let target_deck = target_deck.unwrap();
@@ -190,12 +191,10 @@ impl CardInfo {
         let cfg = config::get();
 
         // relative path from cfg.path to output_path
-        let relative_path = pathdiff::diff_paths(&self.source_file, &cfg.path)
+        pathdiff::diff_paths(&self.source_file, &cfg.path)
             .unwrap_or(self.source_file.clone())
             .to_string_lossy()
-            .into_owned();
-
-        relative_path
+            .into_owned()
     }
 
     pub fn relative_ankiconf_path(&self) -> String {
@@ -203,14 +202,12 @@ impl CardInfo {
         let output_path = self.source_file.parent().unwrap_or(&cfg.path).to_path_buf();
 
         // relative path from output_path to cfg.path / ankiconf.typ
-        let ankiconf_relative_path = {
-            let ankiconf_path = cfg.path.join("ankiconf.typ");
-            pathdiff::diff_paths(&ankiconf_path, &output_path).unwrap_or(ankiconf_path)
-        }
-        .to_string_lossy()
-        .into_owned();
 
-        ankiconf_relative_path
+        let ankiconf_path = cfg.path.join("ankiconf.typ");
+        pathdiff::diff_paths(&ankiconf_path, &output_path)
+            .unwrap_or(ankiconf_path)
+            .to_string_lossy()
+            .into_owned()
     }
 
     pub fn image_path(&self, page: usize) -> String {

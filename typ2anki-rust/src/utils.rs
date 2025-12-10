@@ -1,5 +1,4 @@
-use base64::{engine::general_purpose::STANDARD, DecodeError, Engine as _};
-use md5;
+use base64::{DecodeError, Engine as _, engine::general_purpose::STANDARD};
 use regex::Regex;
 use serde_json::Value;
 use std::cmp::max;
@@ -85,7 +84,7 @@ pub fn print_header(lines: &[&str], width: usize, border_char: char) {
         width
     };
 
-    let border: String = iter::repeat(border_char).take(width).collect();
+    let border: String = iter::repeat_n(border_char, width).collect();
     println!("{}", border);
     for line in lines {
         let centered_line = format!("{:^width$}", line, width = width);

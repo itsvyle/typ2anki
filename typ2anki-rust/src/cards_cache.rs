@@ -31,14 +31,12 @@ impl CardsCacheManager {
         let cfg = config::get();
         let static_hash =
             hash_string(format!("{}{}", ankiconf_hash, cfg.config_hash.as_ref().unwrap()).as_str());
-        let cache: HashMap<String, String>;
-
-        if cfg.skip_cache {
-            cache = HashMap::new();
+        let cache = if cfg.skip_cache {
+            HashMap::new()
         } else {
             let s = anki_api::get_cards_cache_string().unwrap_or("{}".to_string());
-            cache = serde_json::from_str(&s).unwrap_or(HashMap::new());
-        }
+            serde_json::from_str(&s).unwrap_or(HashMap::new())
+        };
 
         Self {
             static_hash,
@@ -71,10 +69,10 @@ impl CardsCacheManager {
         let mut total_cards = 0;
         for (k, v) in &self.old_cache {
             total_cards += 1;
-            if let Some(new_v) = self.new_cache.get(k) {
-                if v[..CACHE_HASH_PART_LENGTH] != new_v[..CACHE_HASH_PART_LENGTH] {
-                    config_changes += 1;
-                }
+            if let Some(new_v) = self.new_cache.get(k)
+                && v[..CACHE_HASH_PART_LENGTH] != new_v[..CACHE_HASH_PART_LENGTH]
+            {
+                config_changes += 1;
             }
         }
 
@@ -85,14 +83,15 @@ impl CardsCacheManager {
             });
         }
 
-        if cfg.recompile_on_config_change.read().unwrap().is_none() {
-            if total_cards > 0 && (config_changes as f64) / (total_cards as f64) >= 0.2 {
-                if output.ask_yes_no("A configuration or ankiconf.typ change has been detected. Do you wish to recompile all cards with this new config? (Y/n)") {
+        if cfg.recompile_on_config_change.read().unwrap().is_none()
+            && total_cards > 0
+            && (config_changes as f64) / (total_cards as f64) >= 0.2
+        {
+            if output.ask_yes_no("A configuration or ankiconf.typ change has been detected. Do you wish to recompile all cards with this new config? (Y/n)") {
                     *cfg.recompile_on_config_change.write().unwrap() = Some(true);
                 } else {
                     *cfg.recompile_on_config_change.write().unwrap() = Some(false);
                 }
-            }
         }
     }
 
@@ -105,7 +104,7 @@ impl CardsCacheManager {
             .old_cache
             .clone()
             .into_iter()
-            .chain(self.new_cache.clone().into_iter())
+            .chain(self.new_cache.clone())
             .collect();
         let s = serde_json::to_string(&push).unwrap_or("{}".to_string());
         let payload = utils::b64_encode(s);

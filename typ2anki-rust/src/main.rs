@@ -106,7 +106,7 @@ fn run(output: impl OutputManager + 'static) {
     }
     output.fail();
 
-    if cards.len() == 0 {
+    if cards.is_empty() {
         output.send(OutputMessage::ParsingError(
             "No cards found, aborting.".to_string(),
         ));

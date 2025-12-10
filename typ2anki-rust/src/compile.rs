@@ -35,7 +35,7 @@ pub fn compile_cards_concurrent(
     let total = cards.len();
     if total > 0 {
         let n_batches = std::cmp::min(cfg.generation_concurrency, total);
-        let chunk_size = (total + n_batches - 1) / n_batches;
+        let chunk_size = total.div_ceil(n_batches);
 
         let mut handles = Vec::with_capacity(n_batches);
         for i in 0..n_batches {
@@ -80,7 +80,7 @@ pub fn compile_cards(
         "".to_string(),
         &cfg.typst_input,
         TYPST_PACKAGE_DOWNLOAD_LOCK
-            .get_or_init(|| DownloadLocks::default())
+            .get_or_init(DownloadLocks::default)
             .clone(),
     );
     world.output_manager = Some(output.clone());

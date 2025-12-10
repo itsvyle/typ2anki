@@ -64,3 +64,6 @@ zune-inflate = { version = "0.2.54", default-features = false, features = ["gzip
 [features]
 default = []
 tree-sitter = ["dep:tree-sitter", "dep:tree-sitter-typst"]
+
+[lints.clippy]
+ptr_arg = "allow"

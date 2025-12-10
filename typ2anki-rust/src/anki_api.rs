@@ -1,6 +1,6 @@
 use once_cell::sync::OnceCell;
 use reqwest::blocking::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::Duration;
@@ -16,10 +16,10 @@ fn _handle_response(resp: reqwest::blocking::Response) -> Result<Value, String> 
     let v: Value = resp
         .json()
         .map_err(|e| format!("invalid json response: {}", e))?;
-    if let Some(err) = v.get("error") {
-        if !err.is_null() {
-            return Err(format!("Anki API Error: {}", err));
-        }
+    if let Some(err) = v.get("error")
+        && !err.is_null()
+    {
+        return Err(format!("Anki API Error: {}", err));
     }
     Ok(v.get("result").cloned().unwrap_or(Value::Null))
 }
@@ -90,10 +90,7 @@ pub fn get_cards_cache_string() -> Option<String> {
         Ok(val) => {
             if let Some(s) = val.as_str() {
                 match utils::b64_decode(s) {
-                    Ok(bytes) => match String::from_utf8(bytes) {
-                        Ok(s) => Some(s),
-                        Err(_) => None,
-                    },
+                    Ok(bytes) => String::from_utf8(bytes).ok(),
                     Err(_) => None,
                 }
             } else {
@@ -143,7 +140,7 @@ pub fn get_anki_deck_name(typ_deck_name: &str) -> String {
     }
     drop(guard);
 
-    let cached = CACHED_DECK_NAMES.get_or_init(|| get_deck_names());
+    let cached = CACHED_DECK_NAMES.get_or_init(get_deck_names);
     let s = format!("::{}", typ_deck_name);
     let result = cached
         .iter()
@@ -193,11 +190,11 @@ fn _get_basic_model_name() -> Result<ModelInfo, String> {
     let mut basic_model_name: Option<String> = None;
     'outer: for locale in &BASIC_MODEL_LOCALES {
         for v in model_list {
-            if let Some(s) = v.as_str() {
-                if s == *locale {
-                    basic_model_name = Some(s.to_string());
-                    break 'outer;
-                }
+            if let Some(s) = v.as_str()
+                && s == *locale
+            {
+                basic_model_name = Some(s.to_string());
+                break 'outer;
             }
         }
     }

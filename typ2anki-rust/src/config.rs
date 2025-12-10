@@ -7,7 +7,7 @@ use clap::parser::ValueSource;
 use clap::{ArgAction, CommandFactory, FromArgMatches, Parser};
 use glob::Pattern;
 use once_cell::sync::OnceCell;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use toml::Value as TomlValue;
 
 use html_escape::encode_double_quoted_attribute;
@@ -142,14 +142,15 @@ impl Config {
         if self.dry_run {
             println!("Destroying config (dry run)");
         }
-        if self.is_zip && self.asked_path != self.path.to_string_lossy() {
-            if let Err(e) = fs::remove_dir_all(&self.path) {
-                eprintln!(
-                    "Warning: Failed to remove temporary extracted zip directory {}: {}",
-                    self.path.display(),
-                    e
-                );
-            }
+        if self.is_zip
+            && self.asked_path != self.path.to_string_lossy()
+            && let Err(e) = fs::remove_dir_all(&self.path)
+        {
+            eprintln!(
+                "Warning: Failed to remove temporary extracted zip directory {}: {}",
+                self.path.display(),
+                e
+            );
         }
     }
 
@@ -236,11 +237,7 @@ pub fn parse_config() -> Config {
     });
 
     let mut path = get_real_path_simple(&asked_path);
-    let is_zip = if path.to_lowercase().ends_with(".zip") {
-        true
-    } else {
-        false
-    };
+    let is_zip = path.to_lowercase().ends_with(".zip");
 
     if is_zip {
         let dir = utils::get_typ2anki_tmp();
@@ -248,80 +245,79 @@ pub fn parse_config() -> Config {
             .expect("Failed to create temporary directory for zip extraction")
             .path()
             .to_path_buf();
-        utils::unzip_file_to_dir(&Path::new(&path), &dir).expect("Failed to extract zip file");
+        utils::unzip_file_to_dir(Path::new(&path), &dir).expect("Failed to extract zip file");
         path = dir.to_string_lossy().to_string();
     }
 
     if !cli.config_file.is_empty() {
         let config_file_path = Path::new(&path).join(&cli.config_file);
         if let Some(table) = load_toml_config(&config_file_path) {
-            if let Some(&ConfigSource::Default) = source_map.get("check_duplicates") {
-                if let Some(v) = table.get("check_duplicates") {
-                    if let Some(b) = v.as_bool() {
-                        check_duplicates = b;
-                        source_map.insert("check_duplicates", ConfigSource::File);
-                    }
-                }
-            }
-            if let Some(&ConfigSource::Default) = source_map.get("exclude_decks") {
-                if let Some(v) = table.get("exclude_decks").and_then(|x| x.as_array()) {
-                    exclude_decks = v
-                        .iter()
-                        .filter_map(|e| e.as_str().map(|s| s.to_string()))
-                        .collect();
-                    source_map.insert("exclude_decks", ConfigSource::File);
-                }
-            }
-            if let Some(&ConfigSource::Default) = source_map.get("exclude_files") {
-                if let Some(v) = table.get("exclude_files").and_then(|x| x.as_array()) {
-                    exclude_files = v
-                        .iter()
-                        .filter_map(|e| e.as_str().map(|s| s.to_string()))
-                        .collect();
-                    source_map.insert("exclude_files", ConfigSource::File);
-                }
+            if let Some(&ConfigSource::Default) = source_map.get("check_duplicates")
+                && let Some(v) = table.get("check_duplicates")
+                && let Some(b) = v.as_bool()
+            {
+                check_duplicates = b;
+                source_map.insert("check_duplicates", ConfigSource::File);
             }
 
-            if let Some(&ConfigSource::Default) = source_map.get("dry_run") {
-                if let Some(v) = table.get("dry_run").and_then(|x| x.as_bool()) {
-                    dry_run = v;
-                    source_map.insert("dry_run", ConfigSource::File);
-                }
+            if let Some(&ConfigSource::Default) = source_map.get("exclude_decks")
+                && let Some(v) = table.get("exclude_decks").and_then(|x| x.as_array())
+            {
+                exclude_decks = v
+                    .iter()
+                    .filter_map(|e| e.as_str().map(|s| s.to_string()))
+                    .collect();
+                source_map.insert("exclude_decks", ConfigSource::File);
+            }
+            if let Some(&ConfigSource::Default) = source_map.get("exclude_files")
+                && let Some(v) = table.get("exclude_files").and_then(|x| x.as_array())
+            {
+                exclude_files = v
+                    .iter()
+                    .filter_map(|e| e.as_str().map(|s| s.to_string()))
+                    .collect();
+                source_map.insert("exclude_files", ConfigSource::File);
             }
 
-            if let Some(&ConfigSource::Default) = source_map.get("max_card_width") {
-                if let Some(v) = table.get("max_card_width").and_then(|x| x.as_str()) {
-                    max_card_width = v.to_string();
-                    source_map.insert("max_card_width", ConfigSource::File);
-                }
+            if let Some(&ConfigSource::Default) = source_map.get("dry_run")
+                && let Some(v) = table.get("dry_run").and_then(|x| x.as_bool())
+            {
+                dry_run = v;
+                source_map.insert("dry_run", ConfigSource::File);
             }
 
-            if let Some(&ConfigSource::Default) = source_map.get("no_cache") {
-                if let Some(v) = table.get("check_checksums").and_then(|x| x.as_bool()) {
-                    skip_cache = v;
-                    source_map.insert("no_cache", ConfigSource::File);
-                }
+            if let Some(&ConfigSource::Default) = source_map.get("max_card_width")
+                && let Some(v) = table.get("max_card_width").and_then(|x| x.as_str())
+            {
+                max_card_width = v.to_string();
+                source_map.insert("max_card_width", ConfigSource::File);
             }
-            if let Some(&ConfigSource::Default) = source_map.get("generation_concurrency") {
-                if let Some(v) = table.get("generation_concurrency").and_then(|x| {
-                    Some(parse_generation_concurrency(
+
+            if let Some(&ConfigSource::Default) = source_map.get("no_cache")
+                && let Some(v) = table.get("check_checksums").and_then(|x| x.as_bool())
+            {
+                skip_cache = v;
+                source_map.insert("no_cache", ConfigSource::File);
+            }
+            if let Some(&ConfigSource::Default) = source_map.get("generation_concurrency")
+                && let Some(v) = table.get("generation_concurrency").map(|x| {
+                    parse_generation_concurrency(
                         x.as_str()
                             .unwrap_or(x.as_integer().unwrap_or(1).to_string().as_str()),
-                    ))
-                }) {
-                    generation_concurrency = v;
-                    source_map.insert("generation_concurrency", ConfigSource::File);
-                }
+                    )
+                })
+            {
+                generation_concurrency = v;
+                source_map.insert("generation_concurrency", ConfigSource::File);
             }
 
-            if let Some(&ConfigSource::Default) = source_map.get("recompile_on_config_change") {
-                if let Some(v) = table
+            if let Some(&ConfigSource::Default) = source_map.get("recompile_on_config_change")
+                && let Some(v) = table
                     .get("recompile_on_config_change")
                     .and_then(|x| x.as_str())
-                {
-                    recompile_on_config_change = v.to_string();
-                    source_map.insert("recompile_on_config_change", ConfigSource::File);
-                }
+            {
+                recompile_on_config_change = v.to_string();
+                source_map.insert("recompile_on_config_change", ConfigSource::File);
             }
         }
     }
@@ -335,23 +331,30 @@ pub fn parse_config() -> Config {
     }
 
     if !check_duplicates && generation_concurrency > 1 {
-        eprintln!("WARNING: Concurrent generation can't be enabled without duplicate checking. Disabling concurrent generation.");
+        eprintln!(
+            "WARNING: Concurrent generation can't be enabled without duplicate checking. Disabling concurrent generation."
+        );
         generation_concurrency = 1;
     } else if generation_concurrency > num_cpus::get() {
-        eprintln!("WARNING: Requested generation concurrency ({}) exceeds number of CPU cores ({}). It is inefficient. Reducing to {}. You can set generation-concurrency to 'max' so that it always takes the amount of logical threads on a given machine.", generation_concurrency, num_cpus::get(), num_cpus::get());
+        eprintln!(
+            "WARNING: Requested generation concurrency ({}) exceeds number of CPU cores ({}). It is inefficient. Reducing to {}. You can set generation-concurrency to 'max' so that it always takes the amount of logical threads on a given machine.",
+            generation_concurrency,
+            num_cpus::get(),
+            num_cpus::get()
+        );
         generation_concurrency = num_cpus::get();
     }
 
     if cli.print_config {
         let c = Cli::command();
         let mut options: Vec<serde_json::Value> = Vec::new();
-        let hidden_args: Vec<String> = (vec![
+        let hidden_args: Vec<String> = [
             "config_file",
             "path",
             "print_config",
             "version",
             "keep_terminal_open",
-        ])
+        ]
         .iter()
         .map(|s| s.to_string())
         .collect();
@@ -444,5 +447,5 @@ pub fn parse_config() -> Config {
 static CACHED_CONFIG: OnceCell<Config> = OnceCell::new();
 
 pub fn get() -> &'static Config {
-    CACHED_CONFIG.get_or_init(|| parse_config())
+    CACHED_CONFIG.get_or_init(parse_config)
 }

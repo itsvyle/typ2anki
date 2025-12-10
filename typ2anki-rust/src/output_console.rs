@@ -57,7 +57,7 @@ impl OutputConsole {
             .iter()
             .map(|(path, _)| {
                 path.strip_prefix(&cfg.path)
-                    .unwrap_or(&path)
+                    .unwrap_or(path)
                     .to_string_lossy()
                     .into_owned()
             })
@@ -239,7 +239,7 @@ impl OutputManager for OutputConsole {
                 eprintln!("Parsing Error: {}", err);
             }
             OutputMessage::NoAnkiConnection => {
-                utils::print_header (
+                utils::print_header(
                     &[
                         "Anki couldn't be detected.",
                         "Please make sure Anki is running and the AnkiConnect add-on is installed.",

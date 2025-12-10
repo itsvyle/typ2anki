@@ -51,30 +51,29 @@ pub fn generate_card_file_content(ankiconf_relative_path: String, card_content: 
         template.push_str(&page_configuration);
         template.push_str("\n\n");
     } else {
-        template.push_str("\n");
+        template.push('\n');
     }
     template.push_str(&display_with_width);
     template.push_str("\n\n");
 
-    let cardlet = format!(
-        r#"#let card(
+    let cardlet = r#"#let card(
       id: "",
       q: "",
       a: "",
       ..args
-    ) = {{
+    ) = {
       let args = arguments(..args, type: "basic")
-      if args.at("type") == "basic" {{
+      if args.at("type") == "basic" {
         context[
           #display_with_width(q)
           #pagebreak()
           #display_with_width(a)
         ]
-      }}
-    }}
+      }
+    }
     #let custom-card = card
     "#
-    );
+    .to_string();
     template.push_str(&cardlet);
     template.push_str("\n\n");
 
