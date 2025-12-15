@@ -104,7 +104,6 @@ fn run(output: impl OutputManager + 'static) {
         }
         files_lock.insert(filepath.clone(), file);
     }
-    output.fail();
 
     if cards.is_empty() {
         output.send(OutputMessage::ParsingError(

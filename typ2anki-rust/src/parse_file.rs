@@ -413,12 +413,6 @@ pub fn parse_cards_from_file_content(
     let start = std::time::Instant::now();
     let parsed = parse_cards_string(&content, &output);
     let _duration = start.elapsed();
-    println!(
-        "Parsed {} cards from file {:?} in {:?}",
-        parsed.len(),
-        filepath.to_string_lossy(),
-        _duration
-    );
 
     if parsed.is_empty() {
         return Ok(file);
