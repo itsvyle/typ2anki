@@ -79,13 +79,15 @@ mod parse_card_tree_sitter {
 
         for child in arguments_node.named_children(&mut cursor) {
             if child.kind() == "tagged"
-                && let Some(field_node) = child.child_by_field_name("field") {
-                    let field_name = field_node.utf8_text(source).ok()?;
-                    if field_name == arg_name
-                        && let Some(value_node) = child.child(2).or_else(|| child.child(1)) {
-                            return value_node.utf8_text(source).ok().map(|s| s.to_string());
-                        }
+                && let Some(field_node) = child.child_by_field_name("field")
+            {
+                let field_name = field_node.utf8_text(source).ok()?;
+                if field_name == arg_name
+                    && let Some(value_node) = child.child(2).or_else(|| child.child(1))
+                {
+                    return value_node.utf8_text(source).ok().map(|s| s.to_string());
                 }
+            }
         }
 
         None
@@ -97,12 +99,13 @@ mod parse_card_tree_sitter {
         function_name: &str,
     ) -> Option<Node<'a>> {
         if let Some(item) = node.child_by_field_name("item")
-            && (item.kind() == "identifier" || item.kind() == "ident") {
-                let name = item.utf8_text(source).unwrap();
-                if name == function_name {
-                    return Some(node);
-                }
+            && (item.kind() == "identifier" || item.kind() == "ident")
+        {
+            let name = item.utf8_text(source).unwrap();
+            if name == function_name {
+                return Some(node);
             }
+        }
         None
     }
 
@@ -159,9 +162,10 @@ mod parse_card_tree_sitter {
         // Checks that the call_node isn't being defined in a let statement
         let check_isnt_let = |call_node: &Node| {
             if let Some(parent) = call_node.parent()
-                && parent.kind() == "let" {
-                    return false;
-                }
+                && parent.kind() == "let"
+            {
+                return false;
+            }
             true
         };
 
@@ -214,28 +218,31 @@ mod parse_card_tree_sitter {
                         .and_then(|n| n.child_by_field_name("item"))
                         .filter(|n| n.kind() == "identifier" || n.kind() == "ident")
                         .and_then(|n| n.utf8_text(source).ok())
-                        && func_name == CARD_FUNCTION_NAME {
-                            push_hashtag = false;
-                            continue;
-                        }
+                        && func_name == CARD_FUNCTION_NAME
+                    {
+                        push_hashtag = false;
+                        continue;
+                    }
                 } else if call_node.kind() == "import" {
                     if let Some(p) = call_node
                         .child_by_field_name("import")
                         .and_then(|n| n.utf8_text(source).ok())
                         .map(|s| s.trim_matches(VALUE_TRIM_CHARS).to_string())
-                        && p.ends_with("ankiconf.typ") {
-                            push_hashtag = false;
-                            continue;
-                        }
+                        && p.ends_with("ankiconf.typ")
+                    {
+                        push_hashtag = false;
+                        continue;
+                    }
                 } else if call_node.kind() == "show"
                     && let Some(p) = call_node
                         .child_by_field_name("value")
                         .and_then(|n| n.utf8_text(source).ok())
                         .map(|s| s.trim_matches(VALUE_TRIM_CHARS).to_string())
-                        && p.contains("conf(doc)") {
-                            push_hashtag = false;
-                            continue;
-                        }
+                    && p.contains("conf(doc)")
+                {
+                    push_hashtag = false;
+                    continue;
+                }
 
                 if push_hashtag {
                     prelude.push('#');
