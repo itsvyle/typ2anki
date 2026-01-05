@@ -120,7 +120,7 @@ mod parse_card_tree_sitter {
             .get_or_init(|| {
                 let mut parser = Parser::new();
                 parser
-                    .set_language(tree_sitter_typst::language())
+                    .set_language(&tree_sitter_typst::language())
                     .expect("Error loading typst grammar");
                 Mutex::new(parser)
             })
@@ -131,6 +131,7 @@ mod parse_card_tree_sitter {
             Some(t) => t,
             None => return vec![],
         };
+
         let source = content.as_bytes();
         let mut cursor = tree.root_node().walk();
         let mut cards = Vec::new();
@@ -151,8 +152,8 @@ mod parse_card_tree_sitter {
                 Ok(BarebonesCardInfo {
                     card_id: id,
                     deck_name: target_deck,
-                    question: ga!("q").unwrap_or(String::new()),
-                    answer: ga!("a").unwrap_or(String::new()),
+                    question: ga!("q").unwrap_or_default(),
+                    answer: ga!("a").unwrap_or_default(),
                     byte_range: (func_call.start_byte(), func_call.end_byte()),
                     prelude_range: None,
                 })
@@ -171,7 +172,12 @@ mod parse_card_tree_sitter {
         let mut push_hashtag = false;
         let mut prelude = String::new();
         let mut previous_was_card = false;
-        for call_node in tree.root_node().children(&mut cursor) {
+
+        for mut call_node in tree.root_node().children(&mut cursor) {
+            if call_node.kind() == "code" {
+                call_node = call_node.child(1).unwrap_or(call_node);
+                println!("Node kind: {}", call_node.kind());
+            }
             if call_node.kind() == "call" {
                 if !check_isnt_let(&call_node) {
                     continue;
@@ -201,7 +207,6 @@ mod parse_card_tree_sitter {
                         Ok(mut c) => {
                             c.prelude_range = Some(0..prelude.len());
                             cards.push(c);
-                            // println!("Card: {:?}", c);
                         }
                     }
                 }
@@ -210,11 +215,9 @@ mod parse_card_tree_sitter {
                     if let Some(func_name) = call_node
                         .children(&mut call_node.walk())
                         .find(|s| s.kind() == "call")
-                        .map(|n| n.child_by_field_name("item"))
-                        .flatten()
+                        .and_then(|n| n.child_by_field_name("item"))
                         .filter(|n| n.kind() == "identifier" || n.kind() == "ident")
-                        .map(|n| n.utf8_text(source).ok())
-                        .flatten()
+                        .and_then(|n| n.utf8_text(source).ok())
                     {
                         if func_name == CARD_FUNCTION_NAME {
                             push_hashtag = false;
@@ -224,8 +227,7 @@ mod parse_card_tree_sitter {
                 } else if call_node.kind() == "import" {
                     if let Some(p) = call_node
                         .child_by_field_name("import")
-                        .map(|n| n.utf8_text(source).ok())
-                        .flatten()
+                        .and_then(|n| n.utf8_text(source).ok())
                         .map(|s| s.trim_matches(VALUE_TRIM_CHARS).to_string())
                     {
                         if p.ends_with("ankiconf.typ") {
@@ -236,8 +238,7 @@ mod parse_card_tree_sitter {
                 } else if call_node.kind() == "show" {
                     if let Some(p) = call_node
                         .child_by_field_name("value")
-                        .map(|n| n.utf8_text(source).ok())
-                        .flatten()
+                        .and_then(|n| n.utf8_text(source).ok())
                         .map(|s| s.trim_matches(VALUE_TRIM_CHARS).to_string())
                     {
                         if p.contains("conf(doc)") {
@@ -248,7 +249,7 @@ mod parse_card_tree_sitter {
                 }
 
                 if push_hashtag {
-                    prelude.push_str("#");
+                    prelude.push('#');
                     push_hashtag = false;
                 }
 
@@ -258,19 +259,19 @@ mod parse_card_tree_sitter {
                     }
                     "parbreak" => {
                         if !previous_was_card {
-                            prelude.push_str("\n");
+                            prelude.push('\n');
                         }
                     }
                     "end" => {
                         if !previous_was_card {
-                            prelude.push_str("\n");
+                            prelude.push('\n');
                         }
                     }
                     "comment" => {
                         previous_was_card = false;
                     }
                     _ => {
-                        if let Some(s) = call_node.utf8_text(source).ok() {
+                        if let Ok(s) = call_node.utf8_text(source) {
                             prelude.push_str(s);
                         }
                         previous_was_card = false;
@@ -297,7 +298,7 @@ mod parse_card_tree_sitter {
                 let mut card_str = String::new();
                 if let Some(prelude_range) = &c.prelude_range {
                     card_str.push_str(&prelude[prelude_range.start..prelude_range.end]);
-                    card_str.push_str("\n");
+                    card_str.push('\n');
                 }
                 card_str.push_str(&content[c.byte_range.0..c.byte_range.1]);
                 card_str
