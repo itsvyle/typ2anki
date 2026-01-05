@@ -78,16 +78,14 @@ mod parse_card_tree_sitter {
         let arguments_node = arguments_node?;
 
         for child in arguments_node.named_children(&mut cursor) {
-            if child.kind() == "tagged" {
-                if let Some(field_node) = child.child_by_field_name("field") {
+            if child.kind() == "tagged"
+                && let Some(field_node) = child.child_by_field_name("field") {
                     let field_name = field_node.utf8_text(source).ok()?;
-                    if field_name == arg_name {
-                        if let Some(value_node) = child.child(2).or_else(|| child.child(1)) {
+                    if field_name == arg_name
+                        && let Some(value_node) = child.child(2).or_else(|| child.child(1)) {
                             return value_node.utf8_text(source).ok().map(|s| s.to_string());
                         }
-                    }
                 }
-            }
         }
 
         None
@@ -98,14 +96,13 @@ mod parse_card_tree_sitter {
         node: Node<'a>,
         function_name: &str,
     ) -> Option<Node<'a>> {
-        if let Some(item) = node.child_by_field_name("item") {
-            if item.kind() == "identifier" || item.kind() == "ident" {
+        if let Some(item) = node.child_by_field_name("item")
+            && (item.kind() == "identifier" || item.kind() == "ident") {
                 let name = item.utf8_text(source).unwrap();
                 if name == function_name {
                     return Some(node);
                 }
             }
-        }
         None
     }
 
@@ -161,11 +158,10 @@ mod parse_card_tree_sitter {
 
         // Checks that the call_node isn't being defined in a let statement
         let check_isnt_let = |call_node: &Node| {
-            if let Some(parent) = call_node.parent() {
-                if parent.kind() == "let" {
+            if let Some(parent) = call_node.parent()
+                && parent.kind() == "let" {
                     return false;
                 }
-            }
             true
         };
 
@@ -218,35 +214,28 @@ mod parse_card_tree_sitter {
                         .and_then(|n| n.child_by_field_name("item"))
                         .filter(|n| n.kind() == "identifier" || n.kind() == "ident")
                         .and_then(|n| n.utf8_text(source).ok())
-                    {
-                        if func_name == CARD_FUNCTION_NAME {
+                        && func_name == CARD_FUNCTION_NAME {
                             push_hashtag = false;
                             continue;
                         }
-                    }
                 } else if call_node.kind() == "import" {
                     if let Some(p) = call_node
                         .child_by_field_name("import")
                         .and_then(|n| n.utf8_text(source).ok())
                         .map(|s| s.trim_matches(VALUE_TRIM_CHARS).to_string())
-                    {
-                        if p.ends_with("ankiconf.typ") {
+                        && p.ends_with("ankiconf.typ") {
                             push_hashtag = false;
                             continue;
                         }
-                    }
-                } else if call_node.kind() == "show" {
-                    if let Some(p) = call_node
+                } else if call_node.kind() == "show"
+                    && let Some(p) = call_node
                         .child_by_field_name("value")
                         .and_then(|n| n.utf8_text(source).ok())
                         .map(|s| s.trim_matches(VALUE_TRIM_CHARS).to_string())
-                    {
-                        if p.contains("conf(doc)") {
+                        && p.contains("conf(doc)") {
                             push_hashtag = false;
                             continue;
                         }
-                    }
-                }
 
                 if push_hashtag {
                     prelude.push('#');
