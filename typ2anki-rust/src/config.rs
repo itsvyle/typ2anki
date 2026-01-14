@@ -61,9 +61,13 @@ struct Cli {
     #[arg(long = "print-config", hide = true)]
     print_config: bool,
 
+    /// Hidden: print config
+    #[arg(long = "auto-number", hide = true)]
+    auto_number: Option<String>,
+
     /// Path to Typst documents folder or zip (positional, allow spaces)
-    #[arg(value_parser, required=true, num_args = 0..)]
-    path: Vec<String>,
+    #[arg(value_parser, num_args = 0..)]
+    path: Option<Vec<String>>,
 
     #[arg(short = 'i', hide = true,action = ArgAction::SetTrue)]
     keep_terminal_open: bool,
@@ -112,6 +116,7 @@ pub struct Config {
     pub config_hash: Option<String>,
     pub output_type: String,
     pub typst_input: Vec<(String, String)>,
+    pub auto_number_file: Option<String>,
 }
 
 impl Config {
@@ -193,10 +198,15 @@ pub fn parse_config() -> Config {
     let matches = Cli::command().get_matches();
     let cli = Cli::from_arg_matches(&matches).unwrap();
 
-    let asked_path = if cli.path.is_empty() {
-        ".".to_string()
-    } else {
-        cli.path.join(" ")
+    let asked_path = match cli.path {
+        Some(p) => {
+            if p.is_empty() {
+                ".".to_string()
+            } else {
+                p.join(" ")
+            }
+        }
+        None => ".".to_string(),
     };
 
     let mut check_duplicates = cli.check_duplicates;
@@ -438,6 +448,7 @@ pub fn parse_config() -> Config {
         output_type: "png".to_string(),
         typst_input,
         keep_terminal_open: cli.keep_terminal_open,
+        auto_number_file: cli.auto_number.clone(),
     };
     cfg.compute_hash();
 

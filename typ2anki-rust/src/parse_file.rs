@@ -28,11 +28,21 @@ pub fn check_ankiconf_exists() {
     }
 }
 
-pub fn is_card_empty(card_str: &str) -> bool {
-    static Q_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"q:\s*(\[\s*\]|"\s*")"#).unwrap());
-    static A_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"a:\s*(\[\s*\]|"\s*")"#).unwrap());
+pub static QUESTION_EMPTY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"q:\s*(\[\s*\]|"\s*")"#).unwrap());
+pub static ANSWER_EMPTY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"a:\s*(\[\s*\]|"\s*")"#).unwrap());
 
-    Q_RE.is_match(card_str) && A_RE.is_match(card_str)
+pub static ID_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"id:\s*"([^"]*)""#).unwrap());
+pub static DECK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"target-deck:\s*"([^"]+)""#).unwrap());
+pub static QUESTION_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"q:\s*(\[(?:.|\n)*\]|"(?:.|\n)*")"#).unwrap());
+pub static ANSWER_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"a:\s*(\[(?:.|\n)*\]|"(?:.|\n)*")"#).unwrap());
+
+pub fn is_card_empty(card_str: &str) -> bool {
+    QUESTION_EMPTY_RE.is_match(card_str) && ANSWER_EMPTY_RE.is_match(card_str)
 }
 
 pub fn get_ankiconf_hash() -> String {
@@ -112,6 +122,7 @@ mod parse_card_tree_sitter {
     pub fn parse_cards_string(
         content: &str,
         output: &Arc<impl OutputManager + 'static>,
+        _no_prelude: bool,
     ) -> Vec<String> {
         let cfg = config::get();
         const CARD_FUNCTION_NAME: &str = "custom-card";
@@ -310,7 +321,11 @@ mod parse_card_tree_sitter {
 mod parse_card_fallback {
     use super::*;
 
-    pub fn parse_cards_string(content: &str, _: &Arc<impl OutputManager + 'static>) -> Vec<String> {
+    pub fn parse_cards_string(
+        content: &str,
+        _: &Arc<impl OutputManager + 'static>,
+        no_prelude: bool,
+    ) -> Vec<String> {
         let mut results: Vec<String> = Vec::new();
         let card_types = ["#card(", "#custom-card("];
 
@@ -339,7 +354,7 @@ mod parse_card_fallback {
                     continue;
                 }
 
-                if !prelude_started {
+                if !no_prelude && !prelude_started {
                     if content[i..].starts_with("//START") || content[i..].starts_with("//start") {
                         prelude_started = true;
                         i += "//START".len();
@@ -411,7 +426,7 @@ pub fn parse_cards_from_file_content(
     let mut file = TypFileStats::new(filepath.clone());
 
     let start = std::time::Instant::now();
-    let parsed = parse_cards_string(&content, &output);
+    let parsed = parse_cards_string(&content, &output, false);
     let _duration = start.elapsed();
 
     if parsed.is_empty() {

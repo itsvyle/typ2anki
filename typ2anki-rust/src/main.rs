@@ -12,6 +12,7 @@ use crate::{
 };
 
 mod anki_api;
+mod auto_number;
 mod card_wrapper;
 mod cards_cache;
 mod compile;
@@ -23,11 +24,16 @@ mod parse_file;
 mod typst_as_library;
 mod utils;
 
-fn main() {
-    config::get();
+fn main() -> anyhow::Result<()> {
+    let cfg = config::get();
     let _cfg_guard = config::ConfigGuard;
     let output = OutputConsole::new();
+
+    if cfg.auto_number_file.is_some() {
+        return auto_number::run_auto_number(output);
+    }
     run(output);
+    Ok(())
 }
 
 fn run(output: impl OutputManager + 'static) {

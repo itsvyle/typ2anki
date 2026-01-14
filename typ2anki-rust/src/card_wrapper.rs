@@ -1,8 +1,13 @@
-use colored::*;
-use regex::Regex;
-use std::{ops::Range, path::PathBuf, sync::LazyLock};
+use std::{ops::Range, path::PathBuf};
 
-use crate::{cards_cache, config, utils};
+use anyhow::Context as _;
+use colored::*;
+
+use crate::{
+    cards_cache, config,
+    parse_file::{ANSWER_RE, DECK_RE, ID_RE, QUESTION_RE, is_card_empty},
+    utils,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CardModificationStatus {
@@ -112,6 +117,12 @@ pub struct BarebonesCardInfo {
     pub prelude_range: Option<Range<usize>>,
 }
 
+impl BarebonesCardInfo {
+    pub fn is_empty(&self) -> bool {
+        self.question.trim().is_empty() && self.answer.trim().is_empty()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CardInfo {
     // The file name from which the card is compiled
@@ -136,10 +147,6 @@ impl CardInfo {
         card_str: &str,
         filepath: PathBuf,
     ) -> Result<Self, String> {
-        static ID_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"id:\s*"([^"]+)""#).unwrap());
-        static DECK_RE: LazyLock<Regex> =
-            LazyLock::new(|| Regex::new(r#"target-deck:\s*"([^"]+)""#).unwrap());
-
         let card_id = ID_RE
             .captures(card_str)
             .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()));
@@ -212,5 +219,28 @@ impl CardInfo {
 
     pub fn image_path(&self, page: usize) -> String {
         format!("typ-{}-{}.png", self.card_id, page)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        is_card_empty(&self.content)
+    }
+
+    pub fn to_barebones(&self) -> anyhow::Result<BarebonesCardInfo> {
+        let question = QUESTION_RE
+            .captures(&self.content)
+            .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+            .context("Question not found in card content")?;
+        let answer = ANSWER_RE
+            .captures(&self.content)
+            .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+            .context("Answer not found in card content")?;
+        Ok(BarebonesCardInfo {
+            card_id: self.card_id.clone(),
+            deck_name: self.deck_name.clone(),
+            question,
+            answer,
+            byte_range: (0, 0),
+            prelude_range: None,
+        })
     }
 }
